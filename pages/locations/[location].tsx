@@ -1,47 +1,57 @@
 import React, { SyntheticEvent, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import { GetStaticProps, GetStaticPaths } from "next";
-import path from "path";
-import fs from "fs/promises";
+import Link from "next/link";
+import locations from "../../Data/locations.json";
 
 interface destinationInterface {
-  id: number;
+  id: string;
   imageUrl: string;
   title: string;
   fixedPrice: number;
 }
 
-export default function Destination() {
+export default function Destination(props: {
+  specificDestination: destinationInterface;
+  hasError: boolean;
+}) {
   const [touristNo, setTouristNo] = useState(0);
   const [daysNo, setDaysNo] = useState(0);
   const [mealsNo, setMealsNo] = useState(0);
 
-  async function getData() {
-    const filePath = path.join(process.cwd(), "Data", "dummy.js");
-    const fileData = await fs.readFile(filePath);
-    const data = JSON.parse(fileData.toString());
+  const router = useRouter();
+  if (props.hasError) {
+    return <h1>Error - please try another parameter</h1>;
   }
+  if (router.isFallback) {
+    return <h1>Loading ...</h1>;
+  }
+
+  //   const fixedPrice = props.destinationData.fixedPrice
 
   return (
     <React.Fragment>
       <main className="font-montserrat">
         <section>
-          <div className="relative h-[200px] w-full flex items-center justify-center bg-black">
+          <div className="relative h-[500px] w-full flex items-center justify-center bg-black">
             <Image
-              src="https://images.unsplash.com/photo-1516026672322-bc52d61a55d5?ixlib=rb-1.2.1&ixid=MnwxMjA3fDB8MHxzZWFyY2h8MXx8c2VyZW5nZXRpfGVufDB8fDB8fA%3D%3D&auto=format&fit=crop&w=500&q=60.jpg"
+              src={props.specificDestination.imageUrl}
               alt=""
               layout="fill"
               objectFit="cover"
               className="opacity-70"
             />
 
-            <Image
-              src="/logo.svg"
-              width={200}
-              height={100}
-              layout="intrinsic"
-              alt=""
-            />
+            <Link href="/">
+              <Image
+                src="/logo.svg"
+                width={200}
+                height={100}
+                layout="intrinsic"
+                alt=""
+              />
+            </Link>
           </div>
         </section>
         <section className="flex items-center justify-center">
@@ -49,7 +59,11 @@ export default function Destination() {
             <h3 className="text-center mt-[2rem]">
               Please Enter the number of the expected visitors
             </h3>
-            <div className="mt-[1rem] flex flex-col">
+            <h3 className="max-w-[300px] text-center flex items-center justify-center">
+              You&apos;re now generating a budget for{" "}
+              {props.specificDestination.title} destination
+            </h3>
+            <div className="mt-[3rem] flex flex-col">
               <label htmlFor="people">
                 Enter the expected number of people
               </label>
@@ -84,14 +98,14 @@ export default function Destination() {
               />
             </div>
 
-            <button className="bg-amber-400 rounded-md px-2 py-2 cursor-pointer mt-3">
-              Ask for Quotation
-            </button>
-
             <p className="mt-3">
               The estimated budget is $
-              {touristNo * 2500 + daysNo * 100 + mealsNo * 10}
+              {touristNo * 100 + daysNo * 100 + mealsNo * 10}
             </p>
+
+            <button className="bg-amber-400 rounded-md px-2 py-2 cursor-pointer mt-3">
+              Generate a new Quotation
+            </button>
           </form>
         </section>
       </main>
@@ -99,11 +113,12 @@ export default function Destination() {
   );
 }
 
-export const GetStaticProps: GetStaticProps = async (context) => {
+// these are fns to call the data;
+export const getStaticProps: GetStaticProps = (context) => {
   const itemId = context.params?.location;
-  const data = await getData();
+  const data = locations;
   const foundItem = data.destinations.find(
-    (item: destinationInterface) => itemId === item.id
+    (item: destinationInterface) => itemId === item.title
   );
 
   if (!foundItem) {
@@ -116,5 +131,19 @@ export const GetStaticProps: GetStaticProps = async (context) => {
     props: {
       specificDestination: foundItem,
     },
+  };
+};
+
+export const getStaticPaths: GetStaticPaths = () => {
+  const data = locations;
+
+  const pathsWithParams = data.destinations.map(
+    (location: destinationInterface) => ({
+      params: { location: location.title },
+    })
+  );
+  return {
+    paths: pathsWithParams,
+    fallback: true,
   };
 };
